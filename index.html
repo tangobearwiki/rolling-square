@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>圆内翻滚</title>
-  <meta name="description" content="正方形沿圆内壁无滑动滚动一周，追踪顶点 A（已调整到 D 点右侧的顶点），路径总长 π(3+2√2)/3。" />
+  <meta name="description" content="正方形沿圆内壁无滑动滚动一周，几何 C 点为轨迹重点，A 点保留在 D 点右侧，路径总长 π(2+√2)/3。" />
   <meta name="theme-color" content="#0a0b0d" />
   <link rel="icon" type="image/svg+xml" href="favicon.svg" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -38,7 +38,7 @@
     .lede { display: none; max-width: 20rem; margin: 0; text-align: right; font-size: 0.875rem; color: var(--muted); text-wrap: pretty; }
     .body { display: flex; flex: 1; min-height: 0; flex-direction: column; }
     .stage { display: flex; flex-direction: column; flex: 1; min-width: 0; min-height: 0; }
-    .canvas-wrap { position: relative; flex: 1; min-height: 20rem; background: var(--canvas); touch-action: none; }
+    .canvas-wrap { position: relative; flex: 1; min-width: 0; min-height: 20rem; overflow: hidden; background: var(--canvas); touch-action: none; }
     canvas { display: block; width: 100%; height: 100%; }
     .controls { display: flex; flex-direction: column; gap: 0.75rem; padding: 0.75rem 1.25rem 1rem; border-top: 1px solid var(--border); background: var(--surface); }
     .row { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; }
@@ -93,7 +93,7 @@
         <p class="kicker">平面几何 · 滚动一周</p>
         <h1>圆内翻滚</h1>
       </div>
-      <p class="lede">边长 2 的正方形在半径 2 的圆内无滑动翻滚，追踪顶点 A（已调整到 D 点右侧的顶点）。</p>
+      <p class="lede">边长 2 的正方形在半径 2 的圆内无滑动翻滚，以几何 C 点为轨迹重点，A 点保留在 D 点右侧。</p>
     </header>
     <div class="body">
       <section class="stage">
@@ -129,7 +129,7 @@
       <aside>
         <section>
           <h2>题目</h2>
-          <p>圆 O 半径为 2，内有边长为 2 的正方形 ABCD。当前动画中 A 已调整到 D 点右侧的顶点，初始正方形的一条边为圆 O 的弦。正方形沿顺时针无滑动翻滚，每次翻转后都有一条边贴壁，直到贴壁圆心角累计达到 2π。求顶点 A 走过的路径总长。</p>
+          <p>圆 O 半径为 2，内有边长为 2 的正方形 ABCD。当前动画中 A 保留在 D 点右侧的顶点；红色轨迹重点追踪几何 C 点。初始正方形的一条边为圆 O 的弦。正方形沿顺时针无滑动翻滚，每次翻转后都有一条边贴壁，直到贴壁圆心角累计达到 2π。求 C 点走过的路径总长。</p>
         </section>
         <section>
           <h2>几何</h2>
@@ -149,9 +149,9 @@
         </section>
         <section class="answer">
           <h2>路径总长</h2>
-          <p class="eq">L = π(3 + 2√2) / 3</p>
+          <p class="eq">L = π(2 + √2) / 3</p>
           <p id="approx"></p>
-          <p>L = 3 · (π/3) + 2 · (π√2 / 3) = π(3 + 2√2) / 3。第三次绕 A 自身翻转，A 静止，贡献为 0。</p>
+          <p>L = 2 · (π/3) + π√2 / 3 = π(2 + √2) / 3。第二次绕 C 自身翻转，C 静止，贡献为 0。</p>
         </section>
       </aside>
     </div>
@@ -167,15 +167,15 @@
       { x: -1, y: Math.sqrt(3) - 2 },
     ];
     const PIVOT_SEQUENCE = [1, 2, 3, 0, 1, 2];
-    // 题目要求追踪的 A 点调整到 D 点右侧的顶点（当前几何模型原索引 3）。
-    const TRACK_VERTEX = 3;
+    // 视觉上 A 保持在 D 点右侧；轨迹重点改为几何 C 点。
+    const TRACK_VERTEX = 2;
     const TRACKED_INFOS = [
-      { pivotIndex: 1, r: 2 * Math.SQRT2, exact: "π√2 / 3" },
-      { pivotIndex: 2, r: 2, exact: "π/3" },
-      { pivotIndex: 3, r: 0, exact: "0" },
-      { pivotIndex: 0, r: 2, exact: "π/3" },
-      { pivotIndex: 1, r: 2 * Math.SQRT2, exact: "π√2 / 3" },
-      { pivotIndex: 2, r: 2, exact: "π/3" },
+      { pivotIndex: 1, r: 2, exact: "π/3" },
+      { pivotIndex: 2, r: 0, exact: "0" },
+      { pivotIndex: 3, r: 2, exact: "π/3" },
+      { pivotIndex: 0, r: 2 * Math.SQRT2, exact: "π√2 / 3" },
+      { pivotIndex: 1, r: 2, exact: "π/3" },
+      { pivotIndex: 2, r: 0, exact: "0" },
     ];
     const TOTAL = TRACKED_INFOS.reduce((sum, f) => sum + f.r * FLIP_ANGLE, 0);
     const FLIP_INFOS = PIVOT_SEQUENCE.map((pivotIndex, i) => ({
@@ -308,7 +308,7 @@
       document.getElementById("scrub").value = sim.time;
       const L = pathLengthAt(sim.time);
       const done = sim.time >= 6 - 1e-6;
-      document.getElementById("len").innerHTML = `<span style="margin-right:.5rem;font-family:var(--font-sans);font-size:.875rem;color:var(--muted)">s(A)</span>${L.toFixed(4)}<small>${done ? "= " + TOTAL.toFixed(4) : "/ " + TOTAL.toFixed(4)}</small>`;
+      document.getElementById("len").innerHTML = `<span style="margin-right:.5rem;font-family:var(--font-sans);font-size:.875rem;color:var(--muted)">s(C)</span>${L.toFixed(4)}<small>${done ? "= " + TOTAL.toFixed(4) : "/ " + TOTAL.toFixed(4)}</small>`;
       const flip = Math.min(5, Math.floor(Math.min(sim.time, 5.999)));
       [...rows.children].forEach((tr, i) => {
         tr.classList.toggle("active", !done && i === flip);
@@ -338,14 +338,18 @@
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       ctx.clearRect(0,0,w,h);
       ctx.fillStyle = pal.bg; ctx.fillRect(0,0,w,h);
-      // 以圆本身为边界进行缩放，留出安全边距，保证整个圆始终落在画布内。
-      const scale = Math.min((w * 0.45) / CIRCLE_R, (h * 0.40) / CIRCLE_R);
+      // 圆始终完整位于 canvas 内，并向左对齐，避免被右侧信息栏覆盖。
+      const margin = Math.max(18, Math.min(48, Math.min(w, h) * 0.06));
+      const diameter = CIRCLE_R * 2;
+      const scale = Math.min((w - margin * 2) / diameter, (h - margin * 2) / diameter);
+      const radiusPx = CIRCLE_R * scale;
+      const originX = margin + radiusPx;
       const st = getSquare(sim.time);
       const { verts, pivot, pivotIndex, flip, eased } = st;
-      const a = verts[TRACK_VERTEX];
+      const a = verts[TRACK_VERTEX]; // 轨迹/高亮点：C
       const center = { x: (verts[0].x+verts[1].x+verts[2].x+verts[3].x)/4, y: (verts[0].y+verts[1].y+verts[2].y+verts[3].y)/4 };
       ctx.save();
-      ctx.translate(w/2, h/2); ctx.scale(scale, -scale);
+      ctx.translate(originX, h/2); ctx.scale(scale, -scale);
       ctx.lineJoin = "round"; ctx.lineCap = "round";
       const lw = 1.25/scale, hair = 1/scale;
       ctx.strokeStyle = pal.guide; ctx.lineWidth = hair;
