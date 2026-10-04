@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>圆内翻滚</title>
-  <meta name="description" content="正方形沿圆内壁无滑动滚动一周，顶点 A 的轨迹与路径总长 π(2+√2)/3。" />
+  <meta name="description" content="正方形沿圆内壁无滑动滚动一周，追踪顶点 A（已调整到 D 点右侧的顶点），路径总长 π(3+2√2)/3。" />
   <meta name="theme-color" content="#0a0b0d" />
   <link rel="icon" type="image/svg+xml" href="favicon.svg" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -93,7 +93,7 @@
         <p class="kicker">平面几何 · 滚动一周</p>
         <h1>圆内翻滚</h1>
       </div>
-      <p class="lede">边长 2 的正方形在半径 2 的圆内无滑动翻滚，追踪顶点 A（当前几何模型中的 C 点）。</p>
+      <p class="lede">边长 2 的正方形在半径 2 的圆内无滑动翻滚，追踪顶点 A（已调整到 D 点右侧的顶点）。</p>
     </header>
     <div class="body">
       <section class="stage">
@@ -129,14 +129,14 @@
       <aside>
         <section>
           <h2>题目</h2>
-          <p>圆 O 半径为 2，内有边长为 2 的正方形 ABCD。当前动画中 A 对应原几何模型的 C 点，初始时 AB 为圆 O 的一条弦。正方形沿顺时针无滑动翻滚，每次翻转后都有一条边贴壁，直到贴壁圆心角累计达到 2π。求顶点 A 走过的路径总长。</p>
+          <p>圆 O 半径为 2，内有边长为 2 的正方形 ABCD。当前动画中 A 已调整到 D 点右侧的顶点，初始正方形的一条边为圆 O 的弦。正方形沿顺时针无滑动翻滚，每次翻转后都有一条边贴壁，直到贴壁圆心角累计达到 2π。求顶点 A 走过的路径总长。</p>
         </section>
         <section>
           <h2>几何</h2>
           <ul>
             <li>弦长 2、半径 2，故圆心角 ∠AOB = 60°，弦心距 √3。</li>
             <li>绕顶点翻到下一边贴壁时，正方形相对实验室系转过 90° − 60° = 30° = π/6。</li>
-            <li>每次贴壁推进 60°，6 次恰好一周。按当前标注，支点依次为 D → A → B → C → D → A。</li>
+            <li>每次贴壁推进 60°，6 次恰好一周。按当前标注，支点依次为 D → B → A → C → D → B。</li>
             <li>A 到支点的距离只可能是 0、边长 2，或对角线 2√2。</li>
           </ul>
         </section>
@@ -149,9 +149,9 @@
         </section>
         <section class="answer">
           <h2>路径总长</h2>
-          <p class="eq">L = π(2 + √2) / 3</p>
+          <p class="eq">L = π(3 + 2√2) / 3</p>
           <p id="approx"></p>
-          <p>L = 2 · (π/3) + π√2 / 3 = π(2 + √2) / 3。第二次绕 A 自身翻转，A 静止，贡献为 0。</p>
+          <p>L = 3 · (π/3) + 2 · (π√2 / 3) = π(3 + 2√2) / 3。第三次绕 A 自身翻转，A 静止，贡献为 0。</p>
         </section>
       </aside>
     </div>
@@ -159,7 +159,7 @@
   <script>
   (() => {
     const CIRCLE_R = 2, FLIP_ANGLE = Math.PI / 6, CONTACT_ADVANCE = Math.PI / 3, FLIP_COUNT = 6;
-    const VERTEX_NAMES = ["C","D","A","B"];
+    const VERTEX_NAMES = ["C","D","B","A"];
     const INITIAL = [
       { x: -1, y: Math.sqrt(3) },
       { x: 1, y: Math.sqrt(3) },
@@ -167,21 +167,20 @@
       { x: -1, y: Math.sqrt(3) - 2 },
     ];
     const PIVOT_SEQUENCE = [1, 2, 3, 0, 1, 2];
-    // 题目要求追踪的 A 点对应当前几何模型中的 C（原索引 2）。
-    const TRACK_VERTEX = 2;
+    // 题目要求追踪的 A 点调整到 D 点右侧的顶点（当前几何模型原索引 3）。
+    const TRACK_VERTEX = 3;
     const TRACKED_INFOS = [
-      { pivotIndex: 1, r: 2, exact: "π/3" },
-      { pivotIndex: 2, r: 0, exact: "0" },
-      { pivotIndex: 3, r: 2, exact: "π/3" },
-      { pivotIndex: 0, r: 2 * Math.SQRT2, exact: "π√2 / 3" },
-      { pivotIndex: 1, r: 2, exact: "π/3" },
-      { pivotIndex: 2, r: 0, exact: "0" },
+      { pivotIndex: 1, r: 2 * Math.SQRT2, exact: "π√2 / 3" },
+      { pivotIndex: 2, r: 2, exact: "π/3" },
+      { pivotIndex: 3, r: 0, exact: "0" },
+      { pivotIndex: 0, r: 2, exact: "π/3" },
+      { pivotIndex: 1, r: 2 * Math.SQRT2, exact: "π√2 / 3" },
+      { pivotIndex: 2, r: 2, exact: "π/3" },
     ];
     const TOTAL = TRACKED_INFOS.reduce((sum, f) => sum + f.r * FLIP_ANGLE, 0);
     const FLIP_INFOS = PIVOT_SEQUENCE.map((pivotIndex, i) => ({
+      ...TRACKED_INFOS[i],
       pivotIndex,
-      r: i === 1 || i === 5 ? 2 * Math.SQRT2 : (i === 3 ? 0 : 2),
-      exact: TRACKED_INFOS[i].exact,
     }));
     const dist = (a,b) => Math.hypot(a.x-b.x, a.y-b.y);
     const rot = (p, o, ang) => {
@@ -243,9 +242,6 @@
       return before.concat(cur.slice(0, keep));
     }
     const PATH = samplePath();
-    let viewR = CIRCLE_R;
-    for (const p of PATH) viewR = Math.max(viewR, Math.hypot(p.x, p.y));
-    viewR *= 1.16;
 
     const rows = document.getElementById("rows");
     TRACKED_INFOS.forEach((f, i) => {
@@ -342,9 +338,8 @@
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       ctx.clearRect(0,0,w,h);
       ctx.fillStyle = pal.bg; ctx.fillRect(0,0,w,h);
-      const pad = Math.min(w,h)*0.05;
-      // 圆必须完整落在画布内：优先按画布宽度限制缩放，避免桌面分栏和窄屏裁切。
-      const scale = Math.min((w * 0.40) / viewR, (h * 0.84) / viewR);
+      // 以圆本身为边界进行缩放，留出安全边距，保证整个圆始终落在画布内。
+      const scale = Math.min((w * 0.45) / CIRCLE_R, (h * 0.40) / CIRCLE_R);
       const st = getSquare(sim.time);
       const { verts, pivot, pivotIndex, flip, eased } = st;
       const a = verts[TRACK_VERTEX];
