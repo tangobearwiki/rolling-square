@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>圆内翻滚</title>
+  <meta name="description" content="正方形沿圆内壁无滑动滚动一周，顶点 A 的轨迹与路径总长 π(3+2√2)/3。" />
+  <meta name="theme-color" content="#0a0b0d" />
+  <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,500&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #0a0b0d;
+      --surface: #12141a;
+      --surface-2: #1a1d26;
+      --canvas: #0c0e12;
+      --fg: #eef0f3;
+      --muted: #8b909a;
+      --subtle: #6b707a;
+      --accent: #c5ccd8;
+      --accent-fg: #0a0b0d;
+      --border: rgba(238, 240, 243, 0.1);
+      --path: #d4654a;
+      --font-sans: "Figtree", ui-sans-serif, system-ui, sans-serif;
+      --font-display: "Newsreader", ui-serif, Georgia, serif;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; background: var(--bg); color: var(--fg); font-family: var(--font-sans); -webkit-font-smoothing: antialiased; }
+    body { min-height: 100dvh; }
+    button { font-family: inherit; cursor: pointer; }
+    button:disabled { cursor: default; opacity: 0.4; }
+    .app { display: flex; flex-direction: column; min-height: 100dvh; }
+    header { display: flex; align-items: flex-end; justify-content: space-between; gap: 1rem; padding: 1rem 1.5rem; border-bottom: 1px solid var(--border); }
+    header h1 { margin: 0.25rem 0 0; font-family: var(--font-display); font-weight: 500; font-size: clamp(1.5rem, 2vw, 1.875rem); letter-spacing: -0.03em; }
+    .kicker { margin: 0; font-size: 0.75rem; font-weight: 500; letter-spacing: 0.06em; color: var(--muted); }
+    .lede { display: none; max-width: 20rem; margin: 0; text-align: right; font-size: 0.875rem; color: var(--muted); text-wrap: pretty; }
+    .body { display: flex; flex: 1; min-height: 0; flex-direction: column; }
+    .stage { display: flex; flex-direction: column; flex: 1; min-width: 0; min-height: 0; }
+    .canvas-wrap { position: relative; flex: 1; min-height: 20rem; background: var(--canvas); touch-action: none; }
+    canvas { display: block; width: 100%; height: 100%; }
+    .controls { display: flex; flex-direction: column; gap: 0.75rem; padding: 0.75rem 1.25rem 1rem; border-top: 1px solid var(--border); background: var(--surface); }
+    .row { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; }
+    .icon-btn, .chip, .speed-btn {
+      display: inline-flex; align-items: center; justify-content: center;
+      border: 0; color: var(--fg); background: var(--surface-2);
+      box-shadow: 0 0 0 1px rgba(238,240,243,0.08);
+      transition: transform 150ms ease-out, background-color 150ms ease-out, color 150ms ease-out;
+    }
+    .icon-btn { width: 2.75rem; height: 2.75rem; border-radius: 0.5rem; }
+    .icon-btn.primary { background: var(--accent); color: var(--accent-fg); box-shadow: none; }
+    .icon-btn:active, .chip:active, .speed-btn:active { transform: scale(0.96); }
+    .icon-btn.ghost { background: transparent; box-shadow: none; color: var(--muted); }
+    .scrubber { flex: 1; min-width: 8rem; appearance: none; height: 2.75rem; background: transparent; }
+    .scrubber::-webkit-slider-runnable-track { height: 0.25rem; border-radius: 999px; background: rgba(238,240,243,0.14); }
+    .scrubber::-webkit-slider-thumb { appearance: none; width: 1rem; height: 1rem; margin-top: -0.375rem; border-radius: 999px; background: var(--accent); }
+    .speeds { display: flex; gap: 0.15rem; padding: 0.25rem; border-radius: 0.5rem; background: var(--surface-2); box-shadow: 0 0 0 1px rgba(238,240,243,0.08); }
+    .speed-btn { min-width: 2.5rem; height: 2rem; padding: 0 0.5rem; border-radius: 0.25rem; background: transparent; color: var(--muted); box-shadow: none; font-size: 0.75rem; font-weight: 500; font-variant-numeric: tabular-nums; }
+    .speed-btn.on { background: var(--accent); color: var(--accent-fg); }
+    .len { font-family: var(--font-display); font-size: 1.25rem; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+    .len small { margin-left: 0.5rem; font-family: var(--font-sans); font-size: 0.875rem; color: var(--muted); }
+    .chip { height: 2.25rem; padding: 0 0.75rem; border-radius: 0.5rem; font-size: 0.75rem; font-weight: 500; background: transparent; color: var(--muted); box-shadow: none; }
+    .chip.on { background: var(--surface-2); color: var(--fg); box-shadow: 0 0 0 1px rgba(238,240,243,0.14); }
+    aside { padding: 1.5rem; border-top: 1px solid var(--border); }
+    aside section { margin-bottom: 1.5rem; }
+    aside h2 { margin: 0 0 0.5rem; font-size: 0.75rem; font-weight: 500; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+    aside p, aside li { font-size: 0.875rem; line-height: 1.6; color: var(--muted); text-wrap: pretty; }
+    aside ul { margin: 0; padding-left: 1.1rem; }
+    aside li { margin: 0.4rem 0; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.875rem; overflow: hidden; border-radius: 0.75rem; background: var(--surface); box-shadow: 0 0 0 1px rgba(238,240,243,0.08); }
+    th { text-align: left; font-size: 0.75rem; font-weight: 500; color: var(--muted); padding: 0.5rem 0.75rem; }
+    td { padding: 0.5rem 0.75rem; border-top: 1px solid var(--border); color: var(--subtle); }
+    tr.active td { background: var(--surface-2); color: var(--fg); }
+    tr.passed td { color: var(--fg); }
+    .answer { padding: 1rem; border-radius: 0.75rem; background: var(--surface); box-shadow: 0 0 0 1px rgba(238,240,243,0.08); }
+    .answer .eq { margin: 0; font-family: var(--font-display); font-size: 1.5rem; letter-spacing: -0.02em; color: var(--fg); }
+    @media (min-width: 960px) {
+      .lede { display: block; }
+      .body { flex-direction: row; }
+      aside { width: 24rem; border-top: 0; border-left: 1px solid var(--border); overflow: auto; }
+      .canvas-wrap { min-height: 0; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      * { transition: none !important; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header>
+      <div>
+        <p class="kicker">平面几何 · 滚动一周</p>
+        <h1>圆内翻滚</h1>
+      </div>
+      <p class="lede">边长 2 的正方形在半径 2 的圆内无滑动翻滚，追踪顶点 A。</p>
+    </header>
+    <div class="body">
+      <section class="stage">
+        <div class="canvas-wrap" id="wrap"><canvas id="cv" aria-label="正方形沿圆内壁滚动的动画"></canvas></div>
+        <div class="controls">
+          <div class="row">
+            <button class="icon-btn primary" id="play" aria-label="暂停" title="空格">
+              <svg id="ico-pause" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg>
+              <svg id="ico-play" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="display:none;margin-left:2px"><path d="M8 5v14l11-7z"/></svg>
+            </button>
+            <button class="icon-btn" id="back" aria-label="上一次翻转">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="19 20 9 12 19 4" fill="currentColor" stroke="none"/><line x1="5" y1="19" x2="5" y2="5"/></svg>
+            </button>
+            <button class="icon-btn" id="fwd" aria-label="下一次翻转">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 4 15 12 5 20" fill="currentColor" stroke="none"/><line x1="19" y1="5" x2="19" y2="19"/></svg>
+            </button>
+            <button class="icon-btn ghost" id="reset" aria-label="回到初始">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7"/><polyline points="3 4 3 9 8 9"/></svg>
+            </button>
+            <input class="scrubber" id="scrub" type="range" min="0" max="6" step="0.002" value="0" aria-label="进度" />
+            <div class="speeds" id="speeds"></div>
+          </div>
+          <div class="row" style="justify-content:space-between">
+            <p class="len" id="len" aria-live="polite"></p>
+            <div class="row">
+              <button class="chip on" id="trail" aria-pressed="true">轨迹</button>
+              <button class="chip on" id="orbits" aria-pressed="true">半径</button>
+              <button class="chip" id="loop" aria-pressed="false">循环</button>
+            </div>
+          </div>
+        </div>
+      </section>
+      <aside>
+        <section>
+          <h2>题目</h2>
+          <p>圆 O 半径为 2，内有边长为 2 的正方形 ABCD。初始时边 AB 作为圆的弦紧贴内壁。正方形沿顺时针无滑动翻滚，每次翻转后都有一条边贴壁，直到贴壁圆心角累计达到 2π。求顶点 A 走过的路径总长。</p>
+        </section>
+        <section>
+          <h2>几何</h2>
+          <ul>
+            <li>弦长 2、半径 2，故圆心角 ∠AOB = 60°，弦心距 √3。</li>
+            <li>绕顶点翻到下一边贴壁时，正方形相对实验室系转过 90° − 60° = 30° = π/6。</li>
+            <li>每次贴壁推进 60°，6 次恰好一周。支点：B → C → D → A → B → C。</li>
+            <li>A 到支点的距离只可能是 0、边长 2，或对角线 2√2。</li>
+          </ul>
+        </section>
+        <section>
+          <h2>六段弧</h2>
+          <table>
+            <thead><tr><th>次</th><th>支点</th><th>半径</th><th>弧长</th></tr></thead>
+            <tbody id="rows"></tbody>
+          </table>
+        </section>
+        <section class="answer">
+          <h2>路径总长</h2>
+          <p class="eq">L = π(3 + 2√2) / 3</p>
+          <p id="approx"></p>
+          <p>L = 3 · (π/3) + 2 · (π√2 / 3) = π(3 + 2√2) / 3。第四次绕 A 自身翻转，A 静止，贡献为 0。</p>
+        </section>
+      </aside>
+    </div>
+  </div>
+  <script>
+  (() => {
+    const CIRCLE_R = 2, FLIP_ANGLE = Math.PI / 6, CONTACT_ADVANCE = Math.PI / 3, FLIP_COUNT = 6;
+    const VERTEX_NAMES = ["A","B","C","D"];
+    const INITIAL = [
+      { x: -1, y: Math.sqrt(3) },
+      { x: 1, y: Math.sqrt(3) },
+      { x: 1, y: Math.sqrt(3) - 2 },
+      { x: -1, y: Math.sqrt(3) - 2 },
+    ];
+    const PIVOT_SEQUENCE = [1, 2, 3, 0, 1, 2];
+    const TOTAL = (Math.PI * (3 + 2 * Math.SQRT2)) / 3;
+    const FLIP_INFOS = [
+      { pivot: "B", r: 2, exact: "π/3" },
+      { pivot: "C", r: 2 * Math.SQRT2, exact: "π√2 / 3" },
+      { pivot: "D", r: 2, exact: "π/3" },
+      { pivot: "A", r: 0, exact: "0" },
+      { pivot: "B", r: 2, exact: "π/3" },
+      { pivot: "C", r: 2 * Math.SQRT2, exact: "π√2 / 3" },
+    ];
+    const dist = (a,b) => Math.hypot(a.x-b.x, a.y-b.y);
+    const rot = (p, o, ang) => {
+      const c = Math.cos(ang), s = Math.sin(ang), dx = p.x-o.x, dy = p.y-o.y;
+      return { x: o.x + dx*c - dy*s, y: o.y + dx*s + dy*c };
+    };
+    const ease = (t) => 0.5 - 0.5 * Math.cos(Math.PI * Math.min(1, Math.max(0, t)));
+    function getSquare(time) {
+      const t = Math.min(FLIP_COUNT, Math.max(0, time));
+      const done = t >= FLIP_COUNT - 1e-9;
+      const flip = done ? FLIP_COUNT - 1 : Math.min(FLIP_COUNT - 1, Math.floor(t));
+      const local = done ? 1 : t - flip;
+      const eased = ease(local);
+      let verts = INITIAL.map(v => ({...v}));
+      for (let i = 0; i < flip; i++) {
+        const p = verts[PIVOT_SEQUENCE[i]];
+        verts = verts.map(v => rot(v, p, FLIP_ANGLE));
+      }
+      const pivotIndex = PIVOT_SEQUENCE[flip];
+      const pivot = verts[pivotIndex];
+      verts = verts.map(v => rot(v, pivot, FLIP_ANGLE * eased));
+      return { verts, flip, local, eased, pivotIndex, pivot, done };
+    }
+    function pathLengthAt(time) {
+      const t = Math.min(FLIP_COUNT, Math.max(0, time));
+      if (t >= FLIP_COUNT) return TOTAL;
+      const flip = Math.min(FLIP_COUNT - 1, Math.floor(t));
+      let sum = 0;
+      for (let i = 0; i < flip; i++) sum += FLIP_INFOS[i].r * FLIP_ANGLE;
+      sum += FLIP_INFOS[flip].r * FLIP_ANGLE * ease(t - flip);
+      return sum;
+    }
+    function samplePath() {
+      const pts = [];
+      for (let i = 0; i < FLIP_COUNT; i++) {
+        const st = getSquare(i);
+        const pivot = st.verts[PIVOT_SEQUENCE[i]];
+        const a0 = st.verts[0];
+        const r = dist(a0, pivot);
+        if (r < 1e-9) { pts.push({ x: a0.x, y: a0.y, flip: i }); continue; }
+        const aStart = Math.atan2(a0.y - pivot.y, a0.x - pivot.x);
+        for (let k = 0; k <= 72; k++) {
+          const ang = aStart + FLIP_ANGLE * k / 72;
+          pts.push({ x: pivot.x + r * Math.cos(ang), y: pivot.y + r * Math.sin(ang), flip: i });
+        }
+      }
+      return pts;
+    }
+    function pathUpTo(time, path) {
+      const t = Math.min(FLIP_COUNT, Math.max(0, time));
+      if (t <= 0) return path.slice(0, 1);
+      if (t >= FLIP_COUNT) return path;
+      const flip = Math.min(FLIP_COUNT - 1, Math.floor(t));
+      const local = ease(t - flip);
+      const before = [], cur = [];
+      for (const p of path) { if (p.flip < flip) before.push(p); else if (p.flip === flip) cur.push(p); }
+      if (cur.length <= 1) return before.concat(cur);
+      const keep = Math.max(1, Math.round(local * (cur.length - 1)) + 1);
+      return before.concat(cur.slice(0, keep));
+    }
+    const PATH = samplePath();
+    let viewR = CIRCLE_R;
+    for (const p of PATH) viewR = Math.max(viewR, Math.hypot(p.x, p.y));
+    viewR *= 1.16;
+
+    const rows = document.getElementById("rows");
+    FLIP_INFOS.forEach((f, i) => {
+      const tr = document.createElement("tr");
+      tr.innerHTML = `<td>${i+1}</td><td>${f.pivot}</td><td>${f.r===0?"0":f.r===2?"2":"2√2"}</td><td style="font-family:var(--font-display);font-style:italic">${f.exact}</td>`;
+      rows.appendChild(tr);
+    });
+    document.getElementById("approx").textContent = "≈ " + TOTAL.toFixed(6);
+
+    const canvas = document.getElementById("cv");
+    const wrap = document.getElementById("wrap");
+    const ctx = canvas.getContext("2d");
+    const pal = {
+      bg: "#0c0e12", circle: "rgba(238,240,243,0.78)", guide: "rgba(238,240,243,0.08)",
+      squareFill: "rgba(197,204,216,0.12)", squareStroke: "rgba(197,204,216,0.85)",
+      contact: "rgba(238,240,243,0.95)", path: "#d4654a", pathDim: "rgba(212,101,74,0.28)",
+      vertexA: "#e07058", vertex: "rgba(238,240,243,0.9)", pivot: "#eef0f3",
+      label: "#eef0f3", muted: "rgba(238,240,243,0.45)",
+    };
+
+    const sim = { playing: true, speed: 1, time: 0, loop: false, trail: true, orbits: true };
+    const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (reduced) sim.playing = false;
+
+    const speedsEl = document.getElementById("speeds");
+    [0.5,1,1.5,2].forEach((s) => {
+      const b = document.createElement("button");
+      b.className = "speed-btn" + (s===1 ? " on" : "");
+      b.textContent = s + "×";
+      b.onclick = () => { sim.speed = s; [...speedsEl.children].forEach((c,i)=>c.classList.toggle("on",[0.5,1,1.5,2][i]===s)); };
+      speedsEl.appendChild(b);
+    });
+
+    function setPlaying(v) {
+      sim.playing = v;
+      document.getElementById("play").setAttribute("aria-label", v ? "暂停" : "播放");
+      document.getElementById("ico-pause").style.display = v ? "block" : "none";
+      document.getElementById("ico-play").style.display = v ? "none" : "block";
+    }
+    function step(dir) {
+      const t = sim.time;
+      sim.time = dir > 0 ? Math.min(6, Math.floor(t + 1e-6) + 1) : Math.max(0, Math.ceil(t - 1e-6) - 1);
+      setPlaying(false);
+      syncUi();
+    }
+    document.getElementById("play").onclick = () => setPlaying(!sim.playing);
+    document.getElementById("back").onclick = () => step(-1);
+    document.getElementById("fwd").onclick = () => step(1);
+    document.getElementById("reset").onclick = () => { sim.time = 0; setPlaying(false); syncUi(); };
+    document.getElementById("scrub").oninput = (e) => { sim.time = Number(e.target.value); setPlaying(false); syncUi(); };
+    document.getElementById("trail").onclick = function(){ sim.trail = !sim.trail; this.classList.toggle("on", sim.trail); this.setAttribute("aria-pressed", sim.trail); };
+    document.getElementById("orbits").onclick = function(){ sim.orbits = !sim.orbits; this.classList.toggle("on", sim.orbits); this.setAttribute("aria-pressed", sim.orbits); };
+    document.getElementById("loop").onclick = function(){ sim.loop = !sim.loop; this.classList.toggle("on", sim.loop); this.setAttribute("aria-pressed", sim.loop); };
+    window.addEventListener("keydown", (e) => {
+      if (["INPUT","TEXTAREA"].includes(e.target.tagName)) return;
+      if (e.code === "Space") { e.preventDefault(); setPlaying(!sim.playing); }
+      if (e.code === "ArrowRight") { e.preventDefault(); step(1); }
+      if (e.code === "ArrowLeft") { e.preventDefault(); step(-1); }
+      if (e.key === "r" || e.key === "R" || e.code === "Home") { e.preventDefault(); sim.time = 0; setPlaying(false); syncUi(); }
+    });
+
+    function syncUi() {
+      document.getElementById("scrub").value = sim.time;
+      const L = pathLengthAt(sim.time);
+      const done = sim.time >= 6 - 1e-6;
+      document.getElementById("len").innerHTML = `<span style="margin-right:.5rem;font-family:var(--font-sans);font-size:.875rem;color:var(--muted)">s(A)</span>${L.toFixed(4)}<small>${done ? "= " + TOTAL.toFixed(4) : "/ " + TOTAL.toFixed(4)}</small>`;
+      const flip = Math.min(5, Math.floor(Math.min(sim.time, 5.999)));
+      [...rows.children].forEach((tr, i) => {
+        tr.classList.toggle("active", !done && i === flip);
+        tr.classList.toggle("passed", done || i < flip);
+      });
+    }
+
+    function disk(c, r, fill, stroke, w) {
+      ctx.beginPath(); ctx.arc(c.x, c.y, r, 0, Math.PI*2);
+      if (fill) { ctx.fillStyle = fill; ctx.fill(); }
+      if (stroke) { ctx.strokeStyle = stroke; ctx.lineWidth = w; ctx.stroke(); }
+    }
+
+    function resize() {
+      const dpr = Math.min(2.5, devicePixelRatio || 1);
+      const rect = wrap.getBoundingClientRect();
+      canvas.width = Math.floor(rect.width * dpr);
+      canvas.height = Math.floor(rect.height * dpr);
+      canvas.style.width = rect.width + "px";
+      canvas.style.height = rect.height + "px";
+    }
+    new ResizeObserver(resize).observe(wrap);
+    resize();
+
+    function draw() {
+      const w = canvas.clientWidth, h = canvas.clientHeight, dpr = devicePixelRatio || 1;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.clearRect(0,0,w,h);
+      ctx.fillStyle = pal.bg; ctx.fillRect(0,0,w,h);
+      const pad = Math.min(w,h)*0.06;
+      const scale = (Math.min(w,h)/2 - pad) / viewR;
+      const st = getSquare(sim.time);
+      const { verts, pivot, pivotIndex, flip, eased } = st;
+      const a = verts[0];
+      const center = { x: (verts[0].x+verts[1].x+verts[2].x+verts[3].x)/4, y: (verts[0].y+verts[1].y+verts[2].y+verts[3].y)/4 };
+      ctx.save();
+      ctx.translate(w/2, h/2); ctx.scale(scale, -scale);
+      ctx.lineJoin = "round"; ctx.lineCap = "round";
+      const lw = 1.25/scale, hair = 1/scale;
+      ctx.strokeStyle = pal.guide; ctx.lineWidth = hair;
+      for (let i=0;i<6;i++){
+        const ang = Math.PI/2 - i*CONTACT_ADVANCE;
+        ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(Math.cos(ang)*CIRCLE_R, Math.sin(ang)*CIRCLE_R); ctx.stroke();
+      }
+      disk({x:0,y:0}, CIRCLE_R, null, pal.circle, lw);
+      disk({x:0,y:0}, 0.045, pal.circle, null, 0);
+      if (sim.orbits) {
+        const rOrbit = dist(a, pivot);
+        if (rOrbit > 1e-6) { ctx.save(); ctx.setLineDash([0.08,0.1]); disk(pivot, rOrbit, null, pal.pathDim, hair); ctx.restore(); }
+      }
+      if (sim.trail) {
+        const drawn = pathUpTo(sim.time, PATH);
+        if (drawn.length > 1) {
+          ctx.beginPath(); ctx.moveTo(drawn[0].x, drawn[0].y);
+          for (let i=1;i<drawn.length;i++) ctx.lineTo(drawn[i].x, drawn[i].y);
+          ctx.strokeStyle = pal.path; ctx.lineWidth = 2.4/scale; ctx.stroke();
+        }
+      }
+      ctx.beginPath(); ctx.moveTo(verts[0].x, verts[0].y);
+      for (let i=1;i<4;i++) ctx.lineTo(verts[i].x, verts[i].y);
+      ctx.closePath(); ctx.fillStyle = pal.squareFill; ctx.fill();
+      ctx.strokeStyle = pal.squareStroke; ctx.lineWidth = lw*1.15; ctx.stroke();
+      if (eased < 0.04 || eased > 0.96) {
+        const n = Math.min(FLIP_COUNT, eased > 0.96 ? flip+1 : flip);
+        const i0 = ((n%4)+4)%4, i1 = (i0+1)%4;
+        ctx.beginPath(); ctx.moveTo(verts[i0].x, verts[i0].y); ctx.lineTo(verts[i1].x, verts[i1].y);
+        ctx.strokeStyle = pal.contact; ctx.lineWidth = lw*2.1; ctx.stroke();
+      }
+      disk(pivot, 0.11, null, pal.pivot, lw*1.4);
+      disk(pivot, 0.045, pal.pivot, null, 0);
+      for (let i=1;i<4;i++) if (i !== pivotIndex) disk(verts[i], 0.07, pal.bg, pal.vertex, hair*1.4);
+      disk(a, 0.11, pal.vertexA, null, 0);
+      disk(a, 0.11, null, "rgba(255,255,255,0.35)", hair);
+      const label = (p, text, color, weight) => {
+        const dx = p.x-center.x, dy = p.y-center.y, n = Math.hypot(dx,dy)||1;
+        ctx.save(); ctx.translate(p.x + dx/n*0.28, p.y + dy/n*0.28); ctx.scale(1/scale, -1/scale);
+        ctx.font = `${weight} 13px Newsreader, serif`; ctx.fillStyle = color; ctx.textAlign="center"; ctx.textBaseline="middle"; ctx.fillText(text,0,0); ctx.restore();
+      };
+      verts.forEach((p,i) => label(p, VERTEX_NAMES[i], i===0?pal.vertexA:pal.label, i===0?"600":"500"));
+      ctx.save(); ctx.translate(0,-0.22); ctx.scale(1/scale,-1/scale);
+      ctx.font = "500 12px Figtree, sans-serif"; ctx.fillStyle = pal.muted; ctx.textAlign="center"; ctx.textBaseline="middle"; ctx.fillText("O",0,0);
+      ctx.restore();
+      ctx.restore();
+      ctx.setTransform(dpr,0,0,dpr,0,0);
+      ctx.font = "500 12px Figtree, sans-serif"; ctx.fillStyle = pal.muted; ctx.textAlign="left"; ctx.textBaseline="top";
+      const info = FLIP_INFOS[flip];
+      const hud = sim.time >= 6 ? "一周完成" : `第 ${flip+1} / 6 次翻转  ·  支点 ${info.pivot}  ·  转角 ${(eased*(FLIP_ANGLE*180/Math.PI)).toFixed(0)}°`;
+      ctx.fillText(hud, 16, 14);
+    }
+
+    let last = performance.now();
+    function tick(now) {
+      const dt = Math.min((now-last)/1000, 0.1); last = now;
+      if (sim.playing) {
+        let next = sim.time + dt * sim.speed * 0.72;
+        if (next >= 6) { if (sim.loop) next %= 6; else { next = 6; setPlaying(false); } }
+        sim.time = next;
+        syncUi();
+      }
+      draw();
+      requestAnimationFrame(tick);
+    }
+    setPlaying(sim.playing);
+    syncUi();
+    requestAnimationFrame(tick);
+  })();
+  </script>
+</body>
+</html>
